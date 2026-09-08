@@ -1,69 +1,61 @@
 <?php
-
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-
-use App\Models\Task;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
+use App\Http\Resources\TaskResource;
+use App\Models\Task;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\JsonResponse;
 
 class TaskController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Request $request): AnonymousResourceCollection
     {
-        $tasks = Task::all();
-        return response()->json($tasks, 200);
+        // Paginación eficiente (Hallazgo 5) y filtrada por el usuario autenticado
+        $tasks = $request->user()->tasks()->latest()->paginate(15);
+        
+        return TaskResource::collection($tasks);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StoreTaskRequest $request)
+    public function store(StoreTaskRequest $request): TaskResource
     {
-        $task = Task::create($request->validated());
-        return response()->json($task, 201);
+        $task = $request->user()->tasks()->create($request->validated());
+
+        return new TaskResource($task);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show($id)
+    public function show(Request $request, Task $task): TaskResource|JsonResponse
     {
-        $task = Task::find($id);
-        if (!$task) {
+        // Verificación de propiedad (evita IDOR si la ruta fuera global)
+        if ($task->user_id !== $request->user()->id) {
             return response()->json(['message' => 'Task not found'], 404);
         }
-        return response()->json($task, 200);
+
+        return new TaskResource($task);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateTaskRequest $request, $id)
+    public function update(UpdateTaskRequest $request, Task $task): TaskResource|JsonResponse
     {
-        $task = Task::find($id);
-        if (!$task) {
+        if ($task->user_id !== $request->user()->id) {
             return response()->json(['message' => 'Task not found'], 404);
         }
+
         $task->update($request->validated());
-        return response()->json($task, 200);
+
+        return new TaskResource($task);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy($id)
+    public function destroy(Request $request, Task $task): JsonResponse
     {
-        $task = Task::find($id);
-        if (!$task) {
+        if ($task->user_id !== $request->user()->id) {
             return response()->json(['message' => 'Task not found'], 404);
         }
+
         $task->delete();
+
         return response()->json(null, 204);
     }
 }

@@ -11,6 +11,7 @@ class Task extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'title',
         'description',
         'status',
@@ -21,4 +22,9 @@ class Task extends Model
     protected $casts = [
         'due_date' => 'datetime',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }
