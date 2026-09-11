@@ -12,13 +12,14 @@ Route::post('/login', [AuthController::class, 'login']);
 // Protected routes (requires Passport token)
 Route::middleware('auth:api')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
-    
-    // CRUD routes for Tasks
-    Route::apiResource('tasks', TaskController::class);
+    Route::get('/me', [AuthController::class, 'me']);
     
     // User profile route
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+
+    // CRUD routes for Tasks
+    Route::apiResource('tasks', TaskController::class);
 });
 
