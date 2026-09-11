@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use App\Models\User;
 
 class AuthController extends Controller
@@ -40,32 +41,46 @@ class AuthController extends Controller
     }
 
     /**
-     * Validar credenciales e iniciar sesión.
+     * Validar credenciales e iniciar sesión con Password Grant.
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => 'required|string|email',
+        $request->validate([
+            'email'    => 'required|email',
             'password' => 'required|string',
         ]);
 
-        if (!Auth::attempt($credentials)) {
-            return response()->json([
-                'message' => 'Unauthorized'
-            ], 401);
+        try {
+            $response = Http::post(config('app.url').'/oauth/token', [
+                'grant_type'    => 'password',
+                'client_id'     => env('PASSPORT_PASSWORD_CLIENT_ID'),
+                'client_secret' => env('PASSPORT_PASSWORD_CLIENT_SECRET'),
+                'username'      => $request->email,
+                'password'      => $request->password,
+            ]);
+
+            if ($response->successful()) {
+                return response()->json($response->json());
+            }
+        } catch (\Throwable $e) {
+            $tokenRequest = Request::create('/oauth/token', 'POST', [
+                'grant_type'    => 'password',
+                'client_id'     => env('PASSPORT_PASSWORD_CLIENT_ID'),
+                'client_secret' => env('PASSPORT_PASSWORD_CLIENT_SECRET'),
+                'username'      => $request->email,
+                'password'      => $request->password,
+            ]);
+            $tokenResponse = app()->handle($tokenRequest);
+
+            if ($tokenResponse->getStatusCode() === 200) {
+                return response()->json(json_decode($tokenResponse->getContent(), true));
+            }
         }
 
-        $user = Auth::user();
-        $token = $user->createToken('APIToken')->accessToken;
-
-        return response()->json([
-            'user' => $user,
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-        ], 200);
+        return response()->json(['message' => 'Credenciales inválidas'], 401);
     }
 
     /**
