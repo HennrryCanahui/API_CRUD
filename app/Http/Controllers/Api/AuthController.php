@@ -84,7 +84,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Revocar el token actual del usuario (cerrar sesión).
+     * Revocar el token actual del usuario y su refresh token (cerrar sesión).
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
@@ -92,11 +92,19 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         if ($request->user() && $request->user()->token()) {
-            $request->user()->token()->revoke();
+            // Revocar el access token actual
+            $token = $request->user()->token();
+            $token->revoke();
+
+            // Revocar también el refresh token
+            if (isset($token->id)) {
+                $refreshTokenRepository = app(\Laravel\Passport\RefreshTokenRepository::class);
+                $refreshTokenRepository->revokeRefreshTokensByAccessTokenId($token->id);
+            }
         }
 
         return response()->json([
-            'message' => 'Successfully logged out'
+            'message' => 'Sesión cerrada correctamente'
         ], 200);
     }
 }
