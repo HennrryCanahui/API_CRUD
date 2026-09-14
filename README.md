@@ -33,3 +33,16 @@ Este proyecto implementa un sistema robusto de autenticación y autorización OA
 
 5. **Invalidación del Token Anterior**:
    El `refresh_token` utilizado queda invalidado inmediatamente y el cliente debe almacenar el nuevo par generado para futuras operaciones.
+
+---
+
+## Pruebas manuales (Postman) — Guía 2
+
+| Caso | Método/URL | Body / Headers | Resultado esperado |
+|---|---|---|---|
+| Login válido | `POST /api/login` | `{"email": "usuario@ejemplo.com", "password": "password"}` | 200 OK + `access_token`, `refresh_token`, `expires_in: 3600` |
+| Login inválido | `POST /api/login` | `{"email": "usuario@ejemplo.com", "password": "wrong"}` | 401 Unauthorized `{"message":"Credenciales inválidas"}` |
+| `/me` con Bearer válido | `GET /api/me` | `Authorization: Bearer <token>` | 200 OK + datos del usuario (`id`, `name`, `email`) |
+| Renovación de Token | `POST /oauth/token` | `grant_type=refresh_token&refresh_token=<token>&client_id=4&client_secret=...` | 200 OK + nuevo par de tokens |
+| Logout seguro | `POST /api/logout` | `Authorization: Bearer <token>` | 200 OK `{"message":"Sesión cerrada correctamente"}` |
+| Reintento con token revocado | `GET /api/me` | `Authorization: Bearer <token_revocado>` | 401 Unauthorized `{"message":"Unauthenticated."}` |
