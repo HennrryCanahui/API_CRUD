@@ -51,7 +51,11 @@ class AuthController extends Controller
         $request->validate([
             'email'    => 'required|email',
             'password' => 'required|string',
+            'scopes'   => 'sometimes|array',
         ]);
+
+        // Scopes solicitados por el cliente, o el scope por defecto
+        $scopes = $request->input('scopes', ['productos.read']);
 
         try {
             $response = Http::post(config('app.url').'/oauth/token', [
@@ -60,6 +64,7 @@ class AuthController extends Controller
                 'client_secret' => env('PASSPORT_PASSWORD_CLIENT_SECRET'),
                 'username'      => $request->email,
                 'password'      => $request->password,
+                'scope'         => implode(' ', (array) $scopes),
             ]);
 
             if ($response->successful()) {
@@ -72,6 +77,7 @@ class AuthController extends Controller
                 'client_secret' => env('PASSPORT_PASSWORD_CLIENT_SECRET'),
                 'username'      => $request->email,
                 'password'      => $request->password,
+                'scope'         => implode(' ', (array) $scopes),
             ]);
             $tokenResponse = app()->handle($tokenRequest);
 
