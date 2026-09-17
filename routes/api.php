@@ -37,5 +37,18 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/reportes', function () {
         return response()->json(['message' => 'Acceso a reportes concedido']);
     })->middleware('scopes:admin,reportes');
+
+    // TEMPORAL — endpoint de debug para inspeccionar los scopes de un token.
+    // Eliminar antes de pasar a producción (ver MEMORY.md).
+    Route::get('/token-info', function (Request $request) {
+        $token = $request->user()->token();
+
+        return response()->json([
+            'token_id' => $token->id,
+            'scopes'   => $token->scopes,
+            'user'     => $request->user()->only('id', 'name', 'email'),
+            'expires'  => $token->expires_at,
+        ]);
+    });
 });
 
