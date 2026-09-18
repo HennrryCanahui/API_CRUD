@@ -25,9 +25,13 @@ class AuthTest extends TestCase
         );
 
         // Cliente de contraseña
-        $clientRepository->createPasswordGrantClient(
+        $passwordClient = $clientRepository->createPasswordGrantClient(
             'Test Password Grant Client', 'users'
         );
+        putenv("PASSPORT_PASSWORD_CLIENT_ID={$passwordClient->id}");
+        putenv("PASSPORT_PASSWORD_CLIENT_SECRET={$passwordClient->plainSecret}");
+        $_ENV['PASSPORT_PASSWORD_CLIENT_ID'] = $passwordClient->id;
+        $_ENV['PASSPORT_PASSWORD_CLIENT_SECRET'] = $passwordClient->plainSecret;
     }
 
     /**
@@ -110,7 +114,7 @@ class AuthTest extends TestCase
 
         $response->assertStatus(401)
             ->assertJson([
-                'message' => 'Unauthorized',
+                'message' => 'Credenciales inválidas',
             ]);
     }
 
@@ -183,7 +187,27 @@ class AuthTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJson([
-                'message' => 'Successfully logged out',
+                'message' => 'Sesión cerrada correctamente',
+            ]);
+    }
+
+    /**
+     * Test que un usuario autenticado puede consultar el endpoint /me.
+     */
+    public function test_authenticated_user_can_access_me_endpoint(): void
+    {
+        $user = User::create([
+            'name' => 'Profile User',
+            'email' => 'profile@example.com',
+            'password' => Hash::make('password123'),
+        ]);
+
+        Passport::actingAs($user);
+
+        $response = $this->getJson('/api/me');
+        $response->assertStatus(200)
+            ->assertJsonFragment([
+                'email' => 'profile@example.com',
             ]);
     }
 }

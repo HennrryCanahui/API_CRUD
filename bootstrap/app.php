@@ -19,8 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prependToGroup('api', \App\Http\Middleware\ForceJsonResponse::class);
 
         $middleware->alias([
-            'client' => CheckToken::class,
-            'scope'  => EnsureClientIsResourceOwner::class, // necesita TODOS los scopes
+            'client' => EnsureClientIsResourceOwner::class,
+            'scope'  => CheckToken::class,                 // necesita TODOS los scopes
             'scopes' => CheckTokenForAnyScope::class,       // necesita AL MENOS UNO
         ]);
     })

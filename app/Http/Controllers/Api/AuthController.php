@@ -57,24 +57,40 @@ class AuthController extends Controller
         // Scopes solicitados por el cliente, o el scope por defecto
         $scopes = $request->input('scopes', ['productos.read']);
 
+        $clientId = env('PASSPORT_PASSWORD_CLIENT_ID');
+        $clientSecret = env('PASSPORT_PASSWORD_CLIENT_SECRET');
+
+        if (!$clientId) {
+            $passwordClient = \Laravel\Passport\Client::where('password_client', 1)->first();
+            if ($passwordClient) {
+                $clientId = $passwordClient->id;
+                $clientSecret = $passwordClient->secret;
+            }
+        }
+
         try {
             $response = Http::post(config('app.url').'/oauth/token', [
                 'grant_type'    => 'password',
-                'client_id'     => env('PASSPORT_PASSWORD_CLIENT_ID'),
-                'client_secret' => env('PASSPORT_PASSWORD_CLIENT_SECRET'),
+                'client_id'     => $clientId,
+                'client_secret' => $clientSecret,
                 'username'      => $request->email,
                 'password'      => $request->password,
                 'scope'         => implode(' ', (array) $scopes),
             ]);
 
             if ($response->successful()) {
-                return response()->json($response->json());
+                $data = $response->json();
+                $user = User::where('email', $request->email)->first();
+                if ($user) {
+                    $data['user'] = $user;
+                }
+                return response()->json($data, 200);
             }
         } catch (\Throwable $e) {
             $tokenRequest = Request::create('/oauth/token', 'POST', [
                 'grant_type'    => 'password',
-                'client_id'     => env('PASSPORT_PASSWORD_CLIENT_ID'),
-                'client_secret' => env('PASSPORT_PASSWORD_CLIENT_SECRET'),
+                'client_id'     => $clientId,
+                'client_secret' => $clientSecret,
                 'username'      => $request->email,
                 'password'      => $request->password,
                 'scope'         => implode(' ', (array) $scopes),
@@ -82,7 +98,12 @@ class AuthController extends Controller
             $tokenResponse = app()->handle($tokenRequest);
 
             if ($tokenResponse->getStatusCode() === 200) {
-                return response()->json(json_decode($tokenResponse->getContent(), true));
+                $data = json_decode($tokenResponse->getContent(), true);
+                $user = User::where('email', $request->email)->first();
+                if ($user) {
+                    $data['user'] = $user;
+                }
+                return response()->json($data, 200);
             }
         }
 
@@ -104,8 +125,12 @@ class AuthController extends Controller
 
             // Revocar también el refresh token
             if (isset($token->id)) {
-                $refreshTokenRepository = app(\Laravel\Passport\RefreshTokenRepository::class);
-                $refreshTokenRepository->revokeRefreshTokensByAccessTokenId($token->id);
+                if (class_exists('Laravel\Passport\RefreshTokenRepository')) {
+                    $refreshTokenRepository = app(\Laravel\Passport\RefreshTokenRepository::class);
+                    $refreshTokenRepository->revokeRefreshTokensByAccessTokenId($token->id);
+                } else {
+                    \Laravel\Passport\RefreshToken::where('access_token_id', $token->id)->update(['revoked' => true]);
+                }
             }
         }
 
