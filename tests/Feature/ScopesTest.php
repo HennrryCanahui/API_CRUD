@@ -22,6 +22,8 @@ class ScopesTest extends TestCase
             'Test Password Grant Client', 'users'
         );
 
+        config(['passport.password_client_id' => $passwordClient->id]);
+        config(['passport.password_client_secret' => $passwordClient->plainSecret]);
         putenv("PASSPORT_PASSWORD_CLIENT_ID={$passwordClient->id}");
         putenv("PASSPORT_PASSWORD_CLIENT_SECRET={$passwordClient->plainSecret}");
         $_ENV['PASSPORT_PASSWORD_CLIENT_ID'] = $passwordClient->id;
@@ -36,7 +38,7 @@ class ScopesTest extends TestCase
         $user = User::create([
             'name' => 'Scope User',
             'email' => 'scope@example.com',
-            'password' => Hash::make('password123'),
+            'password' => 'password123',
         ]);
 
         $response = $this->postJson('/api/login', [

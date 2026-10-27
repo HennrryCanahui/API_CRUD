@@ -28,7 +28,7 @@ class AuthController extends Controller
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
+            'password' => $validated['password'],
         ]);
 
         $token = $user->createToken('APIToken')->accessToken;
@@ -57,18 +57,18 @@ class AuthController extends Controller
         // Scopes solicitados por el cliente, o el scope por defecto
         $scopes = $request->input('scopes', ['productos.read']);
 
-        $clientId = env('PASSPORT_PASSWORD_CLIENT_ID');
-        $clientSecret = env('PASSPORT_PASSWORD_CLIENT_SECRET');
-
-        if (!$clientId) {
-            $passwordClient = \Laravel\Passport\Client::where('password_client', 1)->first();
-            if ($passwordClient) {
-                $clientId = $passwordClient->id;
-                $clientSecret = $passwordClient->secret;
-            }
-        }
+        $clientId = config('passport.password_client_id') ?: env('PASSPORT_PASSWORD_CLIENT_ID');
+        $clientSecret = config('passport.password_client_secret') ?: env('PASSPORT_PASSWORD_CLIENT_SECRET');
 
         try {
+            if (!$clientId) {
+                $passwordClient = \Laravel\Passport\Client::whereJsonContains('grant_types', 'password')->first();
+                if ($passwordClient) {
+                    $clientId = $passwordClient->id;
+                    $clientSecret = $passwordClient->plainSecret ?? $passwordClient->secret;
+                }
+            }
+
             $tokenRequest = Request::create('/oauth/token', 'POST', [
                 'grant_type'    => 'password',
                 'client_id'     => $clientId,

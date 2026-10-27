@@ -28,6 +28,8 @@ class AuthTest extends TestCase
         $passwordClient = $clientRepository->createPasswordGrantClient(
             'Test Password Grant Client', 'users'
         );
+        config(['passport.password_client_id' => $passwordClient->id]);
+        config(['passport.password_client_secret' => $passwordClient->plainSecret]);
         putenv("PASSPORT_PASSWORD_CLIENT_ID={$passwordClient->id}");
         putenv("PASSPORT_PASSWORD_CLIENT_SECRET={$passwordClient->plainSecret}");
         $_ENV['PASSPORT_PASSWORD_CLIENT_ID'] = $passwordClient->id;
@@ -43,6 +45,7 @@ class AuthTest extends TestCase
             'name' => 'John Doe',
             'email' => 'john@example.com',
             'password' => 'password123',
+            'password_confirmation' => 'password123',
         ]);
 
         $response->assertStatus(201)
@@ -80,7 +83,7 @@ class AuthTest extends TestCase
         $user = User::create([
             'name' => 'Jane Doe',
             'email' => 'jane@example.com',
-            'password' => Hash::make('password123'),
+            'password' => 'password123',
         ]);
 
         $response = $this->postJson('/api/login', [
